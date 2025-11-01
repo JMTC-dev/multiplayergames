@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useRivetActor } from "@/lib/utils/useRivetActor";
+import { useGameRoom } from "@/lib/hooks/useGameRoom";
 import type {
-  GameState,
   Card as CardType,
   CardColor,
-  ServerMessage,
   Player,
 } from "@/lib/games/uno/types";
 import { canPlayCard } from "@/lib/games/uno/logic/validation";
@@ -23,77 +21,32 @@ function UNOGameContent() {
   const roomCode = searchParams.get("room");
   const playerName = searchParams.get("name");
 
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingWildCard, setPendingWildCard] = useState<CardType | null>(null);
-  const [gameStarted, setGameStarted] = useState(false);
   const [winner, setWinner] = useState<{ id: string; name: string } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { sendMessage, onMessage, isConnected } = useRivetActor(roomCode);
+  // Use the Socket.IO game room hook
+  const {
+    gameState,
+    waitingPlayers,
+    isConnected,
+    error,
+    startGame,
+    playCard: playCardAction,
+    drawCard: drawCardAction,
+    callUno: callUnoAction,
+  } = useGameRoom({
+    roomId: roomCode || "",
+    playerName: playerName || "",
+  });
 
-  // Join game on connect
-  useEffect(() => {
-    if (isConnected && playerName && !myPlayerId) {
-      sendMessage({
-        type: "join_game",
-        playerName,
-      });
-    }
-  }, [isConnected, playerName, myPlayerId, sendMessage]);
-
-  // Handle incoming messages
-  useEffect(() => {
-    if (!isConnected) return;
-
-    return onMessage((message: ServerMessage) => {
-      console.log("Received message:", message.type);
-
-      switch (message.type) {
-        case "game_state":
-          setGameState(message.state);
-          // Find my player ID
-          if (!myPlayerId && playerName) {
-            const me = message.state.players.find(
-              (p) => p.name === playerName
-            );
-            if (me) {
-              setMyPlayerId(me.id);
-            }
-          }
-          break;
-
-        case "player_joined":
-          setPlayers((prev) => {
-            if (prev.some((p) => p.id === message.player.id)) {
-              return prev;
-            }
-            return [...prev, message.player];
-          });
-          break;
-
-        case "game_started":
-          setGameStarted(true);
-          setGameState(message.state);
-          break;
-
-        case "game_over":
-          setWinner({ id: message.winnerId, name: message.winnerName });
-          break;
-
-        case "error":
-          setErrorMessage(message.message);
-          setTimeout(() => setErrorMessage(null), 3000);
-          break;
-      }
-    });
-  }, [isConnected, onMessage, myPlayerId, playerName]);
+  // Find my player ID
+  const myPlayerId = gameState?.players.find((p) => p.name === playerName)?.id || null;
+  const gameStarted = gameState?.phase === "playing" || gameState?.phase === "finished";
 
   const handleStartGame = useCallback(() => {
-    sendMessage({ type: "start_game" });
-  }, [sendMessage]);
+    startGame();
+  }, [startGame]);
 
   const handlePlayCard = useCallback(
     (card: CardType) => {
@@ -107,61 +60,32 @@ function UNOGameContent() {
       }
 
       // Play regular card
-      sendMessage({
-        type: "game_action",
-        action: {
-          type: "play_card",
-          playerId: myPlayerId,
-          card,
-        },
-      });
+      playCardAction(myPlayerId, card);
     },
-    [myPlayerId, gameState, sendMessage]
+    [myPlayerId, gameState, playCardAction]
   );
 
   const handleColorSelect = useCallback(
     (color: CardColor) => {
       if (!myPlayerId || !pendingWildCard) return;
 
-      sendMessage({
-        type: "game_action",
-        action: {
-          type: "play_card",
-          playerId: myPlayerId,
-          card: pendingWildCard,
-          chosenColor: color,
-        },
-      });
+      playCardAction(myPlayerId, pendingWildCard, color);
 
       setShowColorPicker(false);
       setPendingWildCard(null);
     },
-    [myPlayerId, pendingWildCard, sendMessage]
+    [myPlayerId, pendingWildCard, playCardAction]
   );
 
   const handleDrawCard = useCallback(() => {
     if (!myPlayerId) return;
-
-    sendMessage({
-      type: "game_action",
-      action: {
-        type: "draw_card",
-        playerId: myPlayerId,
-      },
-    });
-  }, [myPlayerId, sendMessage]);
+    drawCardAction(myPlayerId);
+  }, [myPlayerId, drawCardAction]);
 
   const handleCallUno = useCallback(() => {
     if (!myPlayerId) return;
-
-    sendMessage({
-      type: "game_action",
-      action: {
-        type: "call_uno",
-        playerId: myPlayerId,
-      },
-    });
-  }, [myPlayerId, sendMessage]);
+    callUnoAction(myPlayerId);
+  }, [myPlayerId, callUnoAction]);
 
   // Check validation
   const myPlayer = gameState?.players.find((p) => p.id === myPlayerId);
@@ -228,7 +152,7 @@ function UNOGameContent() {
           </div>
 
           <div className="space-y-3 mb-6">
-            {players.map((player) => (
+            {waitingPlayers.map((player) => (
               <div
                 key={player.id}
                 className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 flex items-center gap-2"
@@ -241,10 +165,10 @@ function UNOGameContent() {
 
           <button
             onClick={handleStartGame}
-            disabled={players.length < 2}
+            disabled={waitingPlayers.length < 2}
             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all"
           >
-            {players.length < 2 ? "Waiting for players..." : "Start Game"}
+            {waitingPlayers.length < 2 ? "Waiting for players..." : "Start Game"}
           </button>
 
           <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
@@ -296,9 +220,9 @@ function UNOGameContent() {
       </div>
 
       {/* Error Message */}
-      {errorMessage && (
+      {error && (
         <div className="bg-red-500 text-white px-4 py-2 text-center">
-          {errorMessage}
+          {error}
         </div>
       )}
 
