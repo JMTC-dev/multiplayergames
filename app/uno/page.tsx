@@ -100,7 +100,8 @@ function UNOGameContent() {
 
   // Determine playable cards
   const playableCards = new Set<string>();
-  if (isMyTurn && topCard && myPlayer && gameState) {
+  // Only allow playing cards if it's your turn and there's no pending draw count
+  if (isMyTurn && topCard && myPlayer && gameState && gameState.pendingDrawCount === 0) {
     myPlayer.hand.forEach((card) => {
       if (canPlayCard(card, topCard, gameState.currentColor)) {
         playableCards.add(card.id);
@@ -237,6 +238,7 @@ function UNOGameContent() {
           myPlayerId={myPlayerId || ""}
           onDrawCard={handleDrawCard}
           canDraw={canDraw}
+          pendingDrawCount={gameState.pendingDrawCount}
         />
       )}
 

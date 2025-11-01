@@ -12,6 +12,7 @@ interface GameBoardProps {
   myPlayerId: string;
   onDrawCard?: () => void;
   canDraw?: boolean;
+  pendingDrawCount?: number;
 }
 
 export default function GameBoard({
@@ -23,6 +24,7 @@ export default function GameBoard({
   myPlayerId,
   onDrawCard,
   canDraw = false,
+  pendingDrawCount = 0,
 }: GameBoardProps) {
   const currentPlayer = players[currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === myPlayerId;
@@ -113,9 +115,20 @@ export default function GameBoard({
       {/* Turn Indicator */}
       <div className="text-center">
         {isMyTurn ? (
-          <div className="text-lg font-bold text-green-600 dark:text-green-400 animate-pulse">
-            Your Turn!
-          </div>
+          pendingDrawCount > 0 ? (
+            <div className="space-y-2">
+              <div className="text-lg font-bold text-red-600 dark:text-red-400 animate-pulse">
+                You must draw {pendingDrawCount} card{pendingDrawCount > 1 ? 's' : ''}!
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Click the draw pile
+              </div>
+            </div>
+          ) : (
+            <div className="text-lg font-bold text-green-600 dark:text-green-400 animate-pulse">
+              Your Turn!
+            </div>
+          )
         ) : (
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Waiting for {currentPlayer?.name}...
