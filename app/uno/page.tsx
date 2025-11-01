@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePartySocket } from "@/lib/utils/usePartySocket";
+import { useRivetSocket } from "@/lib/utils/useRivetSocket";
 import type {
   GameState,
   Card as CardType,
@@ -32,7 +32,7 @@ function UNOGameContent() {
   const [winner, setWinner] = useState<{ id: string; name: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { sendMessage, onMessage, isConnected } = usePartySocket(roomCode);
+  const { sendMessage, onMessage, isConnected } = useRivetSocket(roomCode);
 
   // Join game on connect
   useEffect(() => {

@@ -4,7 +4,7 @@ Play your favorite games with friends online! Starting with UNO, with more games
 
 ## Features
 
-- **Real-time Multiplayer** - Powered by PartyKit WebSockets
+- **Real-time Multiplayer** - Powered by Rivet WebSockets on Vercel Functions
 - **Mobile-Friendly** - Optimized for touch screens and mobile devices
 - **Room-Based Games** - Create or join game rooms with easy-to-share codes
 - **Modern Stack** - Built with Next.js 15, TypeScript, and Tailwind CSS
@@ -20,8 +20,8 @@ Play your favorite games with friends online! Starting with UNO, with more games
 ## Tech Stack
 
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS
-- **Multiplayer**: PartyKit (WebSocket-based real-time communication)
-- **Deployment**: Vercel (frontend) + PartyKit (multiplayer server)
+- **Multiplayer**: Rivet (WebSocket-based real-time communication on Vercel Functions)
+- **Deployment**: Vercel (everything in one deployment!)
 
 ## Project Structure
 
@@ -41,8 +41,10 @@ Play your favorite games with friends online! Starting with UNO, with more games
 │   │       ├── types/   # TypeScript types
 │   │       └── logic/   # Game rules engine
 │   └── utils/           # Shared utilities
-├── party/               # PartyKit server
-│   └── index.ts        # UNO game server
+├── rivet/               # Rivet actor registry
+│   └── registry.ts     # UNO game server actor
+├── app/api/rivet/       # Rivet API route
+│   └── [...all]/route.ts  # Actor endpoint
 └── public/             # Static assets
 ```
 
@@ -61,53 +63,34 @@ npm install
 
 ### Development
 
-You'll need to run both the Next.js dev server and the PartyKit dev server:
+With Rivet, everything runs in one command! No separate server needed:
 
 ```bash
-# Terminal 1: Start Next.js dev server
+# Start Next.js dev server (Rivet actors included)
 npm run dev
-
-# Terminal 2: Start PartyKit dev server
-npm run dev:party
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Deployment
 
-### Deploy Frontend to Vercel
+### Deploy to Vercel
+
+With Rivet, everything deploys together in a single step!
 
 ```bash
 # Install Vercel CLI (if not already installed)
 npm i -g vercel
 
-# Deploy
+# Deploy (includes both frontend and Rivet actors)
 vercel
 ```
 
-### Deploy PartyKit Server
-
-```bash
-# Deploy to PartyKit
-npm run deploy:party
-```
-
-After deploying PartyKit, update your Vercel environment variables:
-- `NEXT_PUBLIC_PARTYKIT_HOST` = your deployed PartyKit URL
+**That's it!** No separate deployments, no environment variables needed. Rivet actors run on Vercel Functions.
 
 ## Environment Variables
 
-Create a `.env.local` file for local development:
-
-```env
-NEXT_PUBLIC_PARTYKIT_HOST=127.0.0.1:1999
-```
-
-For production, set in Vercel dashboard:
-
-```env
-NEXT_PUBLIC_PARTYKIT_HOST=your-project.your-username.partykit.dev
-```
+**No environment variables needed!** Rivet runs on the same domain as your Next.js app, so everything works automatically in both development and production.
 
 ## How to Play UNO
 

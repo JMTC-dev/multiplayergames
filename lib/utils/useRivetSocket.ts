@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import PartySocket from "partysocket";
 import type { ServerMessage, ClientMessage } from "../games/uno/types";
 
-export function usePartySocket(roomId: string | null) {
-  const [socket, setSocket] = useState<PartySocket | null>(null);
+export function useRivetSocket(roomId: string | null) {
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messageHandlersRef = useRef<Set<(message: ServerMessage) => void>>(
@@ -16,24 +15,22 @@ export function usePartySocket(roomId: string | null) {
   useEffect(() => {
     if (!roomId) return;
 
-    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST;
-    if (!host) {
-      setError("PartyKit host not configured");
-      return;
-    }
+    // Build the WebSocket URL for Rivet actor
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/api/rivet/unoGameActor/${roomId}`;
 
-    const partySocket = new PartySocket({
-      host,
-      room: roomId,
-    });
+    console.log("Connecting to Rivet:", wsUrl);
 
-    partySocket.addEventListener("open", () => {
-      console.log("Connected to PartyKit");
+    const ws = new WebSocket(wsUrl);
+
+    ws.addEventListener("open", () => {
+      console.log("Connected to Rivet");
       setIsConnected(true);
       setError(null);
     });
 
-    partySocket.addEventListener("message", (event) => {
+    ws.addEventListener("message", (event) => {
       try {
         const message: ServerMessage = JSON.parse(event.data);
         messageHandlersRef.current.forEach((handler) => handler(message));
@@ -42,20 +39,20 @@ export function usePartySocket(roomId: string | null) {
       }
     });
 
-    partySocket.addEventListener("error", (event) => {
-      console.error("PartySocket error:", event);
+    ws.addEventListener("error", (event) => {
+      console.error("Rivet WebSocket error:", event);
       setError("Connection error");
     });
 
-    partySocket.addEventListener("close", () => {
-      console.log("Disconnected from PartyKit");
+    ws.addEventListener("close", () => {
+      console.log("Disconnected from Rivet");
       setIsConnected(false);
     });
 
-    setSocket(partySocket);
+    setSocket(ws);
 
     return () => {
-      partySocket.close();
+      ws.close();
     };
   }, [roomId]);
 
