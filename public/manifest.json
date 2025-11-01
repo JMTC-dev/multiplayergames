@@ -1,0 +1,22 @@
+{
+  "name": "Multiplayer Games",
+  "short_name": "Multi Games",
+  "description": "Play games with friends online - UNO, Connect 4, Battleships, Chess, and more!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
